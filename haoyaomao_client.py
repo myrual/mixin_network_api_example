@@ -1,3 +1,4 @@
+import os
 import json
 import csv
 import requests
@@ -105,7 +106,7 @@ def readMyAsset(robot, config):
     asset_list = []
     for singleAsset in assets_info:
         if singleAsset["balance"] != "0":
-            asset_list.append((singleAsset["symbol"], singleAsset["balance"]))
+            asset_list.append((singleAsset["symbol"], singleAsset["asset_id"], singleAsset["balance"]))
     return asset_list
 
 def searchSnapShot(robot, config, in_snapshort_id):
@@ -210,15 +211,7 @@ def pubkeyContent(inputContent):
 
 if __name__ == '__main__':
     print(u"1: create user from scratch")
-    print(u"2: look balance")
-    print(u"3: transfer money to admin")
-    print(u"4: create my pin")
-    print(u"5: verify my pin")
-    print(u"6: read my asset")
-    print(u"7: transfer CNB asset to ")
-    print(u"71: search user uuid  ")
-    print(u"8: show my CNB pay link asset to ")
-    print(u"9: search snapshot ")
+    print(u"2: look balance and transfer to admin")
     answer = prompt(u'Give me some input: ')
     print(u'You said: %s' % answer)
     if answer == u"1":
@@ -228,10 +221,12 @@ if __name__ == '__main__':
         DevConfig.mixin_pin_token = mixin_config.mixin_pin_token
         DevConfig.private_key     = mixin_config.private_key
         DevConfig.deviceID = mixin_config.admin_uuid
+        if os.path.isfile('rsa_account.csv') == False:
+            with open('rsa_account.csv', 'a') as csvfile:
+                fieldnames = ['eth_address', 'pub', 'private_key', 'user_id', 'session_id', 'pin_token', 'asset_pin']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
         with open('rsa_account.csv', 'a') as csvfile:
-            fieldnames = ['eth_address', 'pub', 'private_key', 'user_id', 'session_id', 'pin_token', 'asset_pin']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
             for i in range(1):
                 key = RSA.generate(1024)
                 pubkey = key.publickey()
@@ -255,7 +250,7 @@ if __name__ == '__main__':
                 asset_depositAddress = depositAddress(mixin_api_robot, myConfig, mixin_asset_list.PRS_ASSET_ID)
                 asset_public_key = asset_depositAddress['data']['public_key']
                 writer.writerow({'eth_address':asset_public_key, 'pub': key2Mixin, 'private_key': private_key, 'user_id': user_id, 'session_id': session_id, 'pin_token':pin_token, 'asset_pin':myConfig.asset_pin})
-    if answer == "3":
+    if answer == "2":
         with open('rsa_account.csv', 'r') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
@@ -266,99 +261,10 @@ if __name__ == '__main__':
                 myConfig.private_key         = row["private_key"]
                 myConfig.deviceID            = myConfig.mixin_client_id
                 myConfig.asset_pin           = row["asset_pin"]
-                readMyAsset(mixin_api_robot, myConfig)
+                assetListsOfThisAccount = readMyAsset(mixin_api_robot, myConfig)
+                for eachAsset in assetListsOfThisAccount:
+                    traceuuid = str(uuid.uuid1())
+                    result_obj = transferToFromPub(mixin_api_robot, myConfig, mixin_config.admin_uuid, eachAsset[1],eachAsset[2],"hao yangmao", traceuuid)
+                    print(result_obj)
 
-    if answer == "4":
-        myConfig  = mixin_config.user_mixin_config()
-        myConfig.mixin_client_id = user_id 
-        myConfig.mixin_pay_sessionid = session_id 
-        myConfig.mixin_pin_token = pin_token
-        myConfig.private_key = private_key
-        myConfig.deviceID = myConfig.mixin_client_id
-        myConfig.asset_pin = "090830"
-        createPin(mixin_api_robot, myConfig)
-    if answer == "5":
-        myConfig  = mixin_config.user_mixin_config()
-        myConfig.mixin_client_id = user_id 
-        myConfig.mixin_pay_sessionid = session_id 
-        myConfig.mixin_pin_token = pin_token
-        myConfig.private_key = private_key
-        myConfig.deviceID = myConfig.mixin_client_id
-        myConfig.asset_pin = "090830"
-        verifyPin(mixin_api_robot, myConfig)
-    if answer == "6":
-        myConfig  = mixin_config.user_mixin_config()
-        myConfig.mixin_client_id = user_id 
-        myConfig.mixin_pay_sessionid = session_id 
-        myConfig.mixin_pin_token = pin_token
-        myConfig.private_key = private_key
-        myConfig.deviceID = myConfig.mixin_client_id
-        myConfig.asset_pin = "090830"
-        readMyAsset(mixin_api_robot, myConfig)
 
-    if answer == "7":
-        myConfig  = mixin_config.user_mixin_config()
-        myConfig.mixin_client_id = user_id 
-        myConfig.mixin_pay_sessionid = session_id 
-        myConfig.mixin_pin_token = pin_token
-        myConfig.private_key = private_key
-        myConfig.deviceID = myConfig.mixin_client_id
-        myConfig.asset_pin = "090830"
-
-        userid = prompt(u'Give me user id: ')
-
-        user_uuid = searchUser(mixin_api_robot, myConfig, userid)
-        traceuuid = str(uuid.uuid1())
-        result_obj = transferToFromPub(mixin_api_robot, myConfig, user_uuid, mixin_asset_list.CNB_ASSET_ID,"123","robot pay example", traceuuid)
-        if 'error' in result_obj:
-            error_body = result_obj['error']
-            error_code = error_body['code']
-            if error_code == 20119:
-                print("to :" + to_user_id + " with asset:" + to_asset_id + " amount:" + to_asset_amount)
-                print(result_obj)
-
-            if error_code == 20117:
-                print("You don't have enoug money")
-                print(result_obj)
-
-        else:
-            result_data = result_obj["data"]
-            snap_id = result_data["snapshot_id"]
-            print("success, snap id is :" + snap_id)
-            searchSnapShot(mixin_api_robot,myConfig, snap_id)
-            readTransferTraceID(mixin_api_robot, myConfig, traceuuid)
-    if answer == "71":
-        myConfig  = mixin_config.user_mixin_config()
-        myConfig.mixin_client_id = user_id 
-        myConfig.mixin_pay_sessionid = session_id 
-        myConfig.mixin_pin_token = pin_token
-        myConfig.private_key = private_key
-        myConfig.deviceID = myConfig.mixin_client_id
-        myConfig.asset_pin = "090830"
-
-        userid = prompt(u'Give me user id: ')
-
-        user_uuid = searchUser(mixin_api_robot, myConfig, userid)
-        print("searched uuid is " + user_uuid)
-
-    if answer == "8":
-        myConfig  = mixin_config.user_mixin_config()
-        myConfig.mixin_client_id = user_id 
-        myConfig.mixin_pay_sessionid = session_id 
-        myConfig.mixin_pin_token = pin_token
-        myConfig.private_key = private_key
-        myConfig.deviceID = myConfig.mixin_client_id
-        myConfig.asset_pin = "090830"
-        payLink = "https://mixin.one/pay?recipient=" + myConfig.mixin_client_id + "&asset=" + mixin_asset_list.CNB_ASSET_ID + "&amount=10086.0" + '&trace=' + str(uuid.uuid1()) + '&memo=hello'
-
-        print(payLink)
-    if answer == "9":
-        myConfig  = mixin_config.user_mixin_config()
-        myConfig.mixin_client_id = user_id 
-        myConfig.mixin_pay_sessionid = session_id 
-        myConfig.mixin_pin_token = pin_token
-        myConfig.private_key = private_key
-        myConfig.deviceID = myConfig.mixin_client_id
-        myConfig.asset_pin = "090830"
-        snapshot_id = prompt(u'Give me snapshot id: ')
-        print(searchSnapShot(mixin_api_robot, myConfig, snapshot_id))
