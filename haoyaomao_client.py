@@ -34,6 +34,7 @@ def createUser(robot, config, user_pubkey):
 
     result_obj = r.json()
     print(result_obj)
+    return result_obj
 def readAssetUser(robot, config):
     encoded = robot.genGETJwtToken_extConfig('/assets', "", config)
 
@@ -72,6 +73,21 @@ def verifyPin(robot, config):
 
     result_obj = r.json()
     print(result_obj)
+
+def depositAddress(robot, config, asset_id):
+    encoded = robot.genGETJwtToken_extConfig('/assets/' + asset_id, "", config)
+    r = requests.get('https://api.mixin.one/assets/' + asset_id, headers = {"Authorization":"Bearer " + encoded, "Mixin-Device-Id":config.mixin_client_id})
+    print(r.status_code)
+    if r.status_code != 200:
+        error_body = result_obj['error']
+        print(error_body)
+
+    r.raise_for_status()
+
+    result_obj = r.json()
+    print(result_obj)
+    return result_obj
+
 
 def readMyAsset(robot, config):
     encoded = robot.genGETJwtToken_extConfig('/assets', "", config)
@@ -183,6 +199,15 @@ user_id = "bdc7167b-1f46-37a1-9200-8b4a3463df78"
 session_id = 'f749263a-978f-470c-8184-aa2812f5cd1c'
 pin_token = 'Px+wx/rI1bTr4fJ2FOs/V2A0gmPZLOgC+szb2GkSsY6s/qbvzdwTYiA9+QgWY/6kkY1iY7ED+TBz6GNyNGcZLQFtWOFM7R69KcAsjy6lkYi8qwQBKuYClbH0ucVddFwMYdgHbfYgsle3eicbTsRZVJXL/yFfzlx4PVVUXS6K2ps='
 
+def pubkeyContent(inputContent):
+    contentWithoutHeader= inputContent[len("-----BEGIN PUBLIC KEY-----") + 1:]
+    contentWithoutTail = contentWithoutHeader[:-1 * (len("-----END PUBLIC KEY-----") + 1)]
+    contentWithoutReturn = contentWithoutTail[:64] + contentWithoutTail[65:129] + contentWithoutTail[130:194] + contentWithoutTail[195:]
+    return contentWithoutReturn
+
+
+
+
 if __name__ == '__main__':
     print(u"1: create user from scratch")
     print(u"2: look balance")
@@ -204,15 +229,32 @@ if __name__ == '__main__':
         DevConfig.private_key     = mixin_config.private_key
         DevConfig.deviceID = mixin_config.admin_uuid
         with open('rsa_account.csv', 'w') as csvfile:
-            fieldnames = ['pub', 'private_key']
+            fieldnames = ['eth_address', 'pub', 'private_key', 'user_id', 'session_id', 'pin_token', 'asset_pin']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
-            for i in range(2):
+            for i in range(1):
                 key = RSA.generate(1024)
                 pubkey = key.publickey()
                 print(key.exportKey())
                 print(pubkey.exportKey())
-                writer.writerow({'pub': pubkey.exportKey(), 'private_key': key.exportKey()})
+                private_key = key.exportKey()
+                key2Mixin = pubkeyContent(pubkey.exportKey())
+                print(key2Mixin)
+                create_user_result = createUser(mixin_api_robot, mixin_config, key2Mixin)
+                user_id = create_user_result['data']['user_id']
+                session_id = create_user_result['data']['session_id']
+                pin_token = create_user_result['data']['pin_token']
+                myConfig  = mixin_config.user_mixin_config()
+                myConfig.mixin_client_id = user_id 
+                myConfig.mixin_pay_sessionid = session_id 
+                myConfig.mixin_pin_token = pin_token
+                myConfig.private_key = private_key
+                myConfig.deviceID = myConfig.mixin_client_id
+                myConfig.asset_pin = "123456"
+                createPin(mixin_api_robot, myConfig)
+                asset_depositAddress = depositAddress(mixin_api_robot, myConfig, mixin_asset_list.PRS_ASSET_ID)
+                asset_public_key = asset_depositAddress['data']['public_key']
+                writer.writerow({'eth_address':asset_public_key, 'pub': key2Mixin, 'private_key': private_key, 'user_id': user_id, 'session_id': session_id, 'pin_token':pin_token, 'asset_pin':myConfig.asset_pin})
     if answer == "3":
         myConfig  = mixin_config.user_mixin_config()
         myConfig.mixin_client_id = user_id 
