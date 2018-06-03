@@ -228,7 +228,7 @@ if __name__ == '__main__':
         DevConfig.mixin_pin_token = mixin_config.mixin_pin_token
         DevConfig.private_key     = mixin_config.private_key
         DevConfig.deviceID = mixin_config.admin_uuid
-        with open('rsa_account.csv', 'w') as csvfile:
+        with open('rsa_account.csv', 'a') as csvfile:
             fieldnames = ['eth_address', 'pub', 'private_key', 'user_id', 'session_id', 'pin_token', 'asset_pin']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
@@ -256,13 +256,18 @@ if __name__ == '__main__':
                 asset_public_key = asset_depositAddress['data']['public_key']
                 writer.writerow({'eth_address':asset_public_key, 'pub': key2Mixin, 'private_key': private_key, 'user_id': user_id, 'session_id': session_id, 'pin_token':pin_token, 'asset_pin':myConfig.asset_pin})
     if answer == "3":
-        myConfig  = mixin_config.user_mixin_config()
-        myConfig.mixin_client_id = user_id 
-        myConfig.mixin_pay_sessionid = session_id 
-        myConfig.mixin_pin_token = pin_token
-        myConfig.private_key = private_key
-        myConfig.deviceID = myConfig.mixin_client_id
-        readAssetUser(mixin_api_robot, myConfig)
+        with open('rsa_account.csv', 'r') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                myConfig  = mixin_config.user_mixin_config()
+                myConfig.mixin_client_id     = row["user_id"]
+                myConfig.mixin_pay_sessionid = row["session_id"]
+                myConfig.mixin_pin_token     = row["pin_token"]
+                myConfig.private_key         = row["private_key"]
+                myConfig.deviceID            = myConfig.mixin_client_id
+                myConfig.asset_pin           = row["asset_pin"]
+                readMyAsset(mixin_api_robot, myConfig)
+
     if answer == "4":
         myConfig  = mixin_config.user_mixin_config()
         myConfig.mixin_client_id = user_id 
