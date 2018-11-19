@@ -1,4 +1,6 @@
 import os
+import random
+import string
 import json
 import csv
 import requests
@@ -22,8 +24,20 @@ from prompt_toolkit import prompt
 
 
 pubkey = """AAAAB3NzaC1yc2EAAAADAQABAAACAQDSieUCEkxcAHSDePuxl7IR7KORH+1BTP/x0bVwxJyLPaw1tmD7jrYhbePUYpMdkKGVlUxLn6q8N7uFSALvV32f2P218dbVIZT50JGMPI/U21G+XMmqEHN0tzGc+CIVoXHe3FtjFqhV/qRmNuVR3c0iWeOn3As9sq5VmyFRhTB+tA7zQbZXpG2bwew47OL0nfpXyHgQf3FFRommWh9RnyNqtEx4Td0V7Kzyein6NgTTpfk52i3TczyMQJYcLr5IP4WfJ4Ekro8tacPrSsyxsqZVPUl7tzQYV+Tm/HB/rTpmaX6GJteV7r/j+2oh9H4JQib0ExVuJexG3jWlfYEozIUG1heFawEMGFS2n5Ri99SnT92IXqOcEYa24RYyFzHcXfm2J+cjYkgj4XYCoEQ4DYMNcLU2YgpISG+cc2oi8gKTUZHDDSWSEks+2bRa2nZ3g+nWLavWZnYME06WbJu0Q+RmoIEATCqd61PVNJw80kwzZ3IQcmOBknRpzTb1TXzNGafY5tMFCdjbJ9clzYAZyB+sqOa+zbo6MW4Ho7YVLTdyvhgee6jpk8AhEu7IgQG/TrHCjEYUIR0AFVtKMumMgAJ01mpoxrQivX0ZVJ4LCp41mXFInFO+8M++d3o4o9ZxATTxR7d3S+JzUR3hho0/ixICJY4GWSTCraV4r2VoYNoDTQ=="""
+VOWELS = "aeiou"
+CONSONANTS = "".join(set(string.ascii_lowercase) - set(VOWELS))
+def generate_word(length):
+    word = ""
+    for i in range(length):
+        if i % 2 == 0:
+            word += random.choice(CONSONANTS)
+        else:
+            word += random.choice(VOWELS)
+    return word
+
+
 def createUser(robot, config, user_pubkey):
-    body = {'full_name': 'bnet bot user example', 'session_secret':user_pubkey}
+    body = {'full_name': generate_word(10), 'session_secret':user_pubkey}
     body_in_json = json.dumps(body)
 
     encoded = robot.genPOSTJwtToken('/users', body_in_json, config.mixin_client_id)
@@ -89,6 +103,33 @@ def depositAddress(robot, config, asset_id):
     print(result_obj)
     return result_obj
 
+def searchSnapShots(robot, config, offset, limit, order):
+    finalURL = "/network/snapshots?offset=%s&order=ASC&limit=%d" % (offset, limit)
+    body = {'offset': offset, 'order' : order, 'limit':limit}
+    body_in_json = json.dumps(body)
+    print(body_in_json)
+
+    encoded = robot.genGETJwtToken_extConfig(finalURL, "" , config)
+    request_header = {"Authorization":"Bearer " + encoded, 'Content-Type': 'application/json', 'Content-length': '0'}
+ 
+    r = requests.get('https://api.mixin.one' + finalURL, headers = request_header)
+    print(r.status_code)
+    if r.status_code != 200:
+        error_body = result_obj['error']
+        print(error_body)
+
+    r.raise_for_status()
+
+    result_obj = r.json()
+    snapshots = result_obj["data"]
+
+    print(len(snapshots))
+    for singleSnapShot in snapshots:
+        if singleSnapShot["snapshot_id"] == "9262c822-e1b3-4e0c-bde7-3acb91801be8":
+            print(singleSnapShot)
+            print("found one ")
+        if "user_id" in singleSnapShot:
+            print("It is me")
 
 def readMyAsset(robot, config):
     encoded = robot.genGETJwtToken_extConfig('/assets', "", config)
@@ -101,7 +142,6 @@ def readMyAsset(robot, config):
     r.raise_for_status()
 
     result_obj = r.json()
-    print(result_obj)
     assets_info = result_obj["data"]
     asset_list = []
     for singleAsset in assets_info:
@@ -210,24 +250,28 @@ def pubkeyContent(inputContent):
 
 
 if __name__ == '__main__':
-    print(u"1: create user from scratch")
+    print(u"1: create 10 user from scratch")
     print(u"2: look balance and transfer to admin")
+    print(u"3: search snapshots of account")
+
     answer = prompt(u'Give me some input: ')
     print(u'You said: %s' % answer)
     if answer == u"1":
-        DevConfig  = mixin_config.user_mixin_config()
-        DevConfig.mixin_client_id = mixin_config.mixin_client_id 
+        DevConfig  =                    mixin_config.user_mixin_config()
+        DevConfig.mixin_client_id =     mixin_config.mixin_client_id 
         DevConfig.mixin_pay_sessionid = mixin_config.mixin_pay_sessionid
-        DevConfig.mixin_pin_token = mixin_config.mixin_pin_token
-        DevConfig.private_key     = mixin_config.private_key
-        DevConfig.deviceID = mixin_config.admin_uuid
+        DevConfig.mixin_pin_token =     mixin_config.mixin_pin_token
+        DevConfig.private_key     =     mixin_config.private_key
+        DevConfig.deviceID =            mixin_config.admin_uuid
         if os.path.isfile('rsa_account.csv') == False:
             with open('rsa_account.csv', 'a') as csvfile:
                 fieldnames = ['eth_address', 'pub', 'private_key', 'user_id', 'session_id', 'pin_token', 'asset_pin']
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
         with open('rsa_account.csv', 'a') as csvfile:
-            for i in range(1):
+            fieldnames = ['eth_address', 'pub', 'private_key', 'user_id', 'session_id', 'pin_token', 'asset_pin']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            for i in range(10):
                 key = RSA.generate(1024)
                 pubkey = key.publickey()
                 print(key.exportKey())
@@ -267,4 +311,11 @@ if __name__ == '__main__':
                     result_obj = transferToFromPub(mixin_api_robot, myConfig, mixin_config.admin_uuid, eachAsset[1],eachAsset[2],"hao yangmao", traceuuid)
                     print(result_obj)
 
-
+    if answer == "3":
+        with open('rsa_account.csv', 'r') as csvfile:
+            reader = csv.DictReader(csvfile)
+            print(readMyAsset(mixin_api_robot, mixin_config))
+            for row in reader:
+		print(mixin_config.mixin_client_id)
+                searchSnapShots(mixin_api_robot, mixin_config, '2018-11-19T13:53:27.461420444Z', 500, 'ASC')
+                break
