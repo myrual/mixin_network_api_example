@@ -12,3 +12,8 @@ The bnet client demo written in python to access mixin api
 ```
 pip2.7 install -r requirements.txt
 ```
+
+### run code
+```
+python haoyao_client.py
+```
