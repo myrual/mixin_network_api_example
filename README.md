@@ -1,11 +1,14 @@
-# bnet_client_demo_mixin
+# Mixin Network API usage in python
+
+The example include create account, setup pin, create asset deposit address, transfer asset to other mixin account, read snapshot, filter snapshot
 The bnet client demo written in python to access mixin api
 
-```
-curl "http://127.0.0.1:10086/payMixinUser" -X POST -d'mixinID=31367&amount=1.899&memo=curlpay'
-```
-```
+## deps
 
-curl "http://127.0.0.1:10086/payUUID" -X POST -d'receipt_uuid=28ee416a-0eaa-4133-bc79-9676909b7b4e&amount=1.199&memo=curlpayuuid'
-```
+* python2.7
+* pip2.7
 
+## pre-request
+```
+pip2.7 install -r requirements.txt
+```
