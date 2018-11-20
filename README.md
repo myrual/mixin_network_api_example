@@ -1,8 +1,6 @@
 # Mixin Network API usage in python
 
 The example include create account, setup pin, create asset deposit address, transfer asset to other mixin account, read snapshot, filter snapshot
-The bnet client demo written in python to access mixin api
-
 ## deps
 
 * python2.7
