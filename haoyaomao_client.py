@@ -40,7 +40,7 @@ def createUser(robot, config, user_pubkey):
     body = {'full_name': generate_word(10), 'session_secret':user_pubkey}
     body_in_json = json.dumps(body)
 
-    encoded = robot.genPOSTJwtToken('/users', body_in_json, config.mixin_client_id)
+    encoded = robot.genPOSTJwtToken_extConfig('/users', body_in_json, config)
 
     r = requests.post('https://api.mixin.one/users', json = body , headers = {"Authorization":"Bearer " + encoded, "Mixin-Device-Id":config.admin_uuid})
     print(r.status_code)
@@ -105,14 +105,10 @@ def depositAddress(robot, config, asset_id):
 
 def searchSnapShots(robot, config, offset, limit, order):
     finalURL = "/network/snapshots?offset=%s&order=ASC&limit=%d" % (offset, limit)
-    body = {'offset': offset, 'order' : order, 'limit':limit}
-    body_in_json = json.dumps(body)
-    print(body_in_json)
-
-    encoded = robot.genGETJwtToken_extConfig(finalURL, "" , config)
+    encoded = robot.genGETJwtToken_extConfig("/network/snapshots", body_in_json , config)
     request_header = {"Authorization":"Bearer " + encoded, 'Content-Type': 'application/json', 'Content-length': '0'}
  
-    r = requests.get('https://api.mixin.one' + finalURL, headers = request_header)
+    r = requests.get('https://api.mixin.one/network/snapshots', json = body_in_json, headers = request_header)
     print(r.status_code)
     if r.status_code != 200:
         error_body = result_obj['error']
@@ -123,13 +119,11 @@ def searchSnapShots(robot, config, offset, limit, order):
     result_obj = r.json()
     snapshots = result_obj["data"]
 
-    print(len(snapshots))
     for singleSnapShot in snapshots:
-        if singleSnapShot["snapshot_id"] == "9262c822-e1b3-4e0c-bde7-3acb91801be8":
-            print(singleSnapShot)
-            print("found one ")
         if "user_id" in singleSnapShot:
+            print(singleSnapShot)
             print("It is me")
+    return snapshots
 
 def readMyAsset(robot, config):
     encoded = robot.genGETJwtToken_extConfig('/assets', "", config)
@@ -314,8 +308,8 @@ if __name__ == '__main__':
     if answer == "3":
         with open('rsa_account.csv', 'r') as csvfile:
             reader = csv.DictReader(csvfile)
-            print(readMyAsset(mixin_api_robot, mixin_config))
             for row in reader:
-		print(mixin_config.mixin_client_id)
-                searchSnapShots(mixin_api_robot, mixin_config, '2018-11-19T13:53:27.461420444Z', 500, 'ASC')
-                break
+                this_snap_shots = searchSnapShots(mixin_api_robot, mixin_config, '2018-11-19T09:53:27.461420444Z', 500, 'ASC')
+		while len(this_snap_shots) == 500:
+                    lasttime = this_snap_shots[-2]["created_at"]
+                    print(lasttime)

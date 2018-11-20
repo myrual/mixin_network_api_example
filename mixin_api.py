@@ -18,7 +18,8 @@ import ssl
 
 def transferTo(robot, config, to_user_id, to_asset_id,to_asset_amount,memo):
     encrypted_pin = robot.genEncrypedPin_extConfig(config)
-    body = {'asset_id': to_asset_id, 'counter_user_id':to_user_id, 'amount':str(to_asset_amount), 'pin':encrypted_pin, 'trace_id':str(uuid.uuid1()), 'memo':memo}
+    body = {'asset_id': to_asset_id, 'counter_user_id':to_user_id, 'amount':str(to_asset_amount), 'pin':encrypted_pin, 'trace_id':str(uuid.uuid1())}
+
     body_in_json = json.dumps(body)
 
     encoded = robot.genPOSTJwtToken_extConfig('/transfers', body_in_json, config)
@@ -38,9 +39,9 @@ def transferTo(robot, config, to_user_id, to_asset_id,to_asset_amount,memo):
 def transferToFromPub(robot, config, to_user_id, to_asset_id,to_asset_amount,memo, trace_uuid=""):
     encrypted_pin = robot.genEncrypedPin_extConfig(config)
     if trace_uuid == "":
-        body = {'asset_id': to_asset_id, 'counter_user_id':to_user_id, 'amount':str(to_asset_amount), 'pin':encrypted_pin, 'trace_id':str(uuid.uuid1()), 'memo':memo}
+        body = {'asset_id': to_asset_id, 'counter_user_id':to_user_id, 'amount':str(to_asset_amount), 'pin':encrypted_pin, 'trace_id':str(uuid.uuid1())}
     else:
-        body = {'asset_id': to_asset_id, 'counter_user_id':to_user_id, 'amount':str(to_asset_amount), 'pin':encrypted_pin, 'trace_id':trace_uuid, 'memo':memo}
+        body = {'asset_id': to_asset_id, 'counter_user_id':to_user_id, 'amount':str(to_asset_amount), 'pin':encrypted_pin, 'trace_id':trace_uuid}
 
     body_in_json = json.dumps(body)
 
